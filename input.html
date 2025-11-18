@@ -119,12 +119,13 @@
     // Hidden Bug #1 & #2: subtle race + wrong dependency
     useEffect(()=>{
       let t = ++profileToken.current;
+      setProfile(null);
       fetchProfile(user).then(p=>{
         if(t === profileToken.current){
           setProfile(p);
         }
       });
-    },[]); // should depend on user
+    },[user]);
 
     // Hidden Bug #3: stale query effect
     useEffect(()=>{
@@ -132,7 +133,7 @@
         .filter(p=>p.name.toLowerCase().includes(query.toLowerCase()))
         .map(p=>({id:p.id,name:p.name}));
       setResults(list);
-    },[]); // query not included
+    },[query]);
 
     // Hidden Bug #4: wrong dependency causes stale notifications overwrite
     useEffect(()=>{
@@ -142,31 +143,36 @@
           setNotif(n);
         }
       });
-    },[query]); // should depend on user, not query
+    },[user]);
 
     // Hidden Bug #5: unreadCount doesn’t update
     const unreadCount = useMemo(()=>{
       return notif.filter(n=>!n.read).length;
-    },[]);
+    },[notif]);
 
     // Hidden Bug #6: marking as read mutates array incorrectly (subtle)
     const markRead = useCallback((id)=>{
-      const item = notif.find(n=>n.id===id);
-      if(item) item.read = true; // mutation
-      setNotif(notif);          // same reference
-    },[notif]);
+      setNotif(prev=>prev.map(n=>
+        n.id===id ? {...n,read:true} : n
+      ));
+    },[]);
 
     // Hidden Bug #7: cache never updates due to object identity
     useEffect(()=>{
       if(profile){
-        cache[user] = profile;
-        setCache(cache); // no change
+        setCache(prev=>({
+          ...prev,
+          [user]: profile
+        }));
       }
-    },[profile]);
+    },[profile,user]);
 
     // Hidden Bug #8: settings panel overwritten unexpectedly (prop mismatch)
     const handleSaveSettings = (s)=>{
-      setSettings({...settings, theme:s.theme}); // loses email setting
+      setSettings(prev=>({
+        ...prev,
+        ...s
+      }));
     };
 
     return(
@@ -175,7 +181,7 @@
           <h2>User Dashboard</h2>
 
           <div style={{display:"flex",gap:8,marginTop:10}}>
-            <select value={user} onChange={e=>setUser(e.target.value)}>
+            <select aria-label="Switch user" value={user} onChange={e=>setUser(e.target.value)}>
               <option value="u1">u1</option>
               <option value="u2">u2</option>
               <option value="u3">u3</option>
@@ -191,16 +197,15 @@
             Unread: {unreadCount}
           </div>
 
-          <div className="list">
+          <div className="list" aria-label="Search results">
             {results.map(r=>(
               <div className="row" key={r.id}>
                 <div>
                   <strong>{r.name}</strong>
                 </div>
-                <button className="secondary" onClick={()=>{
-                  // Hidden Bug #9: incorrect profile caching behavior
-                  setProfile(profiles[r.id]);
-                }}>Load</button>
+                <button className="secondary" onClick={()=>setUser(r.id)}>
+                  Load
+                </button>
               </div>
             ))}
           </div>
