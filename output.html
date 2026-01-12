@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Complex Dashboard (Hidden Bugs Version)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body {
+      margin:0; padding:24px;
+      background:#0b1526; color:#e8eef5; font-family:-apple-system,Roboto,Arial;
+    }
+    .app { max-width:1100px; margin:auto; display:grid; grid-template-columns:1fr 380px; gap:20px; }
+    .card { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:18px; border-radius:12px; }
+    input, select { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1);color:white; padding:6px 8px;border-radius:8px; }
+    button { background:#06b6d4; color:#031d23; padding:8px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:600; }
+    .secondary { background:transparent; color:#9fb3c8; border:1px solid rgba(255,255,255,0.08); }
+    .small { color:#9fb3c8; font-size:13px; }
+    .list { max-height:340px; overflow:auto; display:flex; flex-direction:column; gap:8px; }
+    .row { display:flex; justify-content:space-between; padding:10px; border-radius:8px; background:rgba(255,255,255,0.03); }
+    pre { background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; max-height:300px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+  const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+  // Mock API
+  const profiles = {
+    u1:{id:"u1",name:"Alice",email:"alice@x.com"},
+    u2:{id:"u2",name:"Bob",email:"bob@x.com"},
+    u3:{id:"u3",name:"Carmen",email:"carmen@x.com"}
+  };
+  const delay = (ms)=>new Promise(r=>setTimeout(r,ms));
+  const random =() => Math.random()*600+200;
+
+  function fetchProfile(uid){
+    return delay(random()).then(()=>profiles[uid]||null);
+  }
+  function fetchNotif(uid){
+    return delay(random()).then(()=>{
+      return Array.from({length:Math.floor(Math.random()*4)+1}).map((_,i)=>({
+        id:`${uid}-n${i}-${Date.now()}`,
+        title:`N${i+1} for ${uid}`,
+        read:Math.random()>0.6
+      }));
+    });
+  }
+  function saveSettings(uid,settings){
+    return delay(random()).then(()=>({ok:true,settings}));
+  }
+
+  // Notification Item
+  function NotificationItem({ item, onRead }) {
+    return (
+      <div className="row">
+        <div>
+          <strong>{item.title}</strong>
+          {!item.read && <span style={{marginLeft:6,color:"#06b6d4"}}>(new)</span>}
+        </div>
+        <button className="secondary" onClick={()=>onRead(item.id)}>Mark</button>
+      </div>
+    );
+  }
+
+  // Settings Panel
+  function SettingsPanel({ userId, settings, onSave }) {
+    const [local, setLocal] = useState(settings);
+
+    const save = async ()=>{
+      const res = await saveSettings(userId,local);
+      if(res.ok) onSave(res.settings);
+    };
+
+    return (
+      <div className="card">
+        <h3>Settings</h3>
+        <div className="small">Theme</div>
+        <select
+          value={local.theme}
+          onChange={e=>setLocal({...local,theme:e.target.value})}
+        >
+          <option>light</option>
+          <option>dark</option>
+        </select>
+
+        <div style={{marginTop:8}} className="small">Email Notify</div>
+        <input
+          type="checkbox"
+          checked={local.email}
+          onChange={e=>setLocal({...local,email:e.target.checked})}
+        />
+
+        <div style={{marginTop:12}}>
+          <button onClick={save}>Save</button>
+        </div>
+      </div>
+    );
+  }
+
+  // App with FIXED BUGS
+  function App(){
+    const [user, setUser] = useState("u1");
+    const [profile, setProfile] = useState(null);
+    const [notif, setNotif] = useState([]);
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState([]);
+    const [settings, setSettings] = useState({ theme:"light", email:true });
+    const [cache, setCache] = useState({});
+
+    const profileToken = useRef(0);
+    const notifToken = useRef(0);
+
+    // Fixed Bug #1 & #2: Added [user] dependency
+    useEffect(()=>{
+      let t = ++profileToken.current;
+      fetchProfile(user).then(p=>{
+        if(t === profileToken.current){
+          setProfile(p);
+        }
+      });
+    },[user]);
+
+    // Fixed Bug #3: Added [query] dependency
+    useEffect(()=>{
+      const list = Object.values(profiles)
+        .filter(p=>p.name.toLowerCase().includes(query.toLowerCase()))
+        .map(p=>({id:p.id,name:p.name}));
+      setResults(list);
+    },[query]);
+
+    // Fixed Bug #4: Changed dependency from [query] to [user]
+    useEffect(()=>{
+      let t = ++notifToken.current;
+      fetchNotif(user).then(n=>{
+        if(t === notifToken.current){
+          setNotif(n);
+        }
+      });
+    },[user]);
+
+    // Fixed Bug #5: Added [notif] dependency
+    const unreadCount = useMemo(()=>{
+      return notif.filter(n=>!n.read).length;
+    },[notif]);
+
+    // Fixed Bug #6: Immutable update instead of mutation
+    const markRead = useCallback((id)=>{
+      setNotif(prev => prev.map(n => n.id === id ? {...n, read: true} : n));
+    },[]);
+
+    // Fixed Bug #7: Create new object for cache update
+    useEffect(()=>{
+      if(profile){
+        setCache(prev => ({...prev, [user]: profile}));
+      }
+    },[profile, user]);
+
+    // Fixed Bug #8: Spread entire settings object
+    const handleSaveSettings = (s)=>{
+      setSettings(s);
+    };
+
+    return(
+      <div className="app">
+        <div className="card">
+          <h2>User Dashboard</h2>
+
+          <div style={{display:"flex",gap:8,marginTop:10}}>
+            <select value={user} onChange={e=>setUser(e.target.value)}>
+              <option value="u1">u1</option>
+              <option value="u2">u2</option>
+              <option value="u3">u3</option>
+            </select>
+            <input
+              placeholder="Search name…"
+              value={query}
+              onChange={e=>setQuery(e.target.value)}
+            />
+          </div>
+
+          <div style={{marginTop:12}} className="small">
+            Unread: {unreadCount}
+          </div>
+
+          <div className="list">
+            {results.map(r=>(
+              <div className="row" key={r.id}>
+                <div>
+                  <strong>{r.name}</strong>
+                </div>
+                <button className="secondary" onClick={()=>{
+                  setUser(r.id);
+                }}>Load</button>
+              </div>
+            ))}
+          </div>
+
+          <h3 style={{marginTop:16}}>Profile</h3>
+          <div className="card small">
+            {profile ? (
+              <div>
+                <div>{profile.name}</div>
+                <div>{profile.email}</div>
+              </div>
+            ): "No profile"}
+          </div>
+
+          <h3 style={{marginTop:16}}>Notifications</h3>
+          <div className="card">
+            {notif.map(n=>(
+              <NotificationItem key={n.id} item={n} onRead={markRead} />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <SettingsPanel
+            userId={user}
+            settings={settings}
+            onSave={handleSaveSettings}
+          />
+          <div className="card" style={{marginTop:12}}>
+            <h3>Debug Cache</h3>
+            <pre>{JSON.stringify(cache,null,2)}</pre>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
