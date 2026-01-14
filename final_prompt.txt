@@ -1,0 +1,249 @@
+Prompt:
+
+You are a senior front-end engineer reviewing a complex UI component that contains multiple functional bugs related to React state, async behavior, controlled inputs, rendering logic, and race conditions.
+
+Your tasks:
+
+1. Detect every UI-related functional bug.
+
+You must identify issues caused by:
+
+
+
+
+
+Incorrect rendering behavior
+
+
+
+
+
+Event-handling mistakes
+
+
+
+
+
+Direct state mutation
+
+
+
+
+
+React hook dependency errors
+
+
+
+
+
+Async timing inconsistencies
+
+
+
+
+
+Incorrect derived state
+
+
+
+
+
+Selection logic issues
+
+
+
+
+
+Stale or conflicting state from race conditions
+
+
+
+
+
+2. For each bug, provide:
+
+
+
+
+
+A clear explanation
+
+
+
+
+
+The root cause
+
+
+
+
+
+The minimal safe fix
+
+
+
+
+
+A unified diff-style patch
+
+
+
+
+
+3. After fixing all issues, output the entire corrected HTML file as the final result.
+
+
+
+
+
+The output must be a single HTML string with proper formatting
+
+
+
+
+
+No extra commentary or code fences
+
+
+
+
+
+It must remain fully runnable in a browser (React + Babel environment)
+
+
+
+
+
+Suitable for automated string replacement pipelines
+
+
+
+
+
+4. Generate runnable tests:
+
+
+
+
+
+Unit tests using Jest + React Testing Library
+
+
+
+
+
+Tests verifying that each fixed bug does not regress
+
+
+
+
+
+Tests covering controlled input updates, list selection, async transitions, loading behavior, and race-condition prevention
+
+
+
+
+
+5. Output the test file in:
+
+
+
+
+
+output.test.ts
+
+
+
+
+
+6. Provide a runnable shell script named:
+
+
+
+
+
+run_tests.sh
+
+
+
+
+
+Install all required dependencies
+
+
+
+
+
+Run Jest test suites
+
+
+
+
+
+Exit successfully only if tests pass
+
+
+
+
+
+
+
+
+
+7. At the end, output a summary file capturing:
+
+
+
+
+
+All detected bugs
+
+
+
+
+
+Fixes applied
+
+
+
+
+
+Test coverage
+
+
+
+
+
+Title: Evaluation of Model Performance in UI Debugging, Patch Creation, and Test Generation
+
+Description: This evaluation measures the model’s ability to:
+
+
+
+
+
+Identify complex UI bugs
+
+
+
+
+
+Produce minimal and accurate patches
+
+
+
+
+
+Generate runnable automated tests
+
+
+
+
+
+Produce a complete corrected HTML file as the final output
+
+
+
+
+
+Maintain clarity and avoid scope creep
